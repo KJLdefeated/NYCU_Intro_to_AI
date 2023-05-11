@@ -1,13 +1,14 @@
 import numpy as np
 import os
 import gym
+import random
 from tqdm import tqdm
 
 total_reward = []
 
 
 class Agent():
-    def __init__(self, env, epsilon=0.95, learning_rate=0.8, gamma=0.9):
+    def __init__(self, env, epsilon=0.05, learning_rate=0.8, gamma=0.9):
         """
         Parameters:
             env: target enviornment.
@@ -39,7 +40,14 @@ class Agent():
         """
         # Begin your code
         # TODO
-        raise NotImplementedError("Not implemented yet.")
+        """
+        Use epsilon greedy select action
+        """
+        if random.random() > self.epsilon:
+            action = np.argmax(self.qtable[state])
+        else:
+            action = random.randint(0, self.env.action_space.n-1)
+        return action
         # End your code
 
     def learn(self, state, action, reward, next_state, done):
@@ -58,7 +66,10 @@ class Agent():
         """
         # Begin your code
         # TODO
-        raise NotImplementedError("Not implemented yet.")
+        """
+        update Q table by the formula: Q(s,a) = (1-alpha) * Q(s,a) + alpha * (r + gamma * max(Q(s')))
+        """
+        self.qtable[state][action] = (1-self.learning_rate) * self.qtable[state][action] + self.learning_rate*(reward + self.gamma * max(self.qtable[next_state]))
         # End your code
         np.save("./Tables/taxi_table.npy", self.qtable)
 
@@ -74,7 +85,12 @@ class Agent():
         """
         # Begin your code
         # TODO
-        raise NotImplementedError("Not implemented yet.")
+        """
+        Return the max Q value of the giving state
+        """
+        # Q opt: for state 243, at least need 9 step to reach the goal.
+        print("Q opt:", -(1-self.gamma**9)/(1-self.gamma) + 20 * self.gamma**9)
+        return max(self.qtable[state])
         # End your code
 
 

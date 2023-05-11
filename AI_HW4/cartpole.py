@@ -2,6 +2,7 @@ import numpy as np
 import gym
 import os
 from tqdm import tqdm
+import random
 
 total_reward = []
 episode = 3000
@@ -9,7 +10,7 @@ decay = 0.045
 
 
 class Agent():
-    def __init__(self, env, epsilon=0.95, learning_rate=0.5, GAMMA=0.97, num_bins=7):
+    def __init__(self, env, epsilon=0.05, learning_rate=0.5, GAMMA=0.97, num_bins=7):
         """
         The agent learning how to control the action of the cart pole.
         Hyperparameters:
@@ -19,6 +20,7 @@ class Agent():
             num_bins: Number of part that the continuous space is to be sliced into.
         """
         self.env = env
+        self.n_actions = 2
 
         self.epsilon = epsilon
         self.learning_rate = learning_rate
@@ -54,7 +56,11 @@ class Agent():
         """
         # Begin your code
         # TODO
-        raise NotImplementedError("Not implemented yet.")
+        """
+        Use numpy function linspace to slice the interval into num_bins part
+        """
+        bins = np.linspace(lower_bound, upper_bound, num_bins)
+        return bins[1:-1]
         # End your code
 
     def discretize_value(self, value, bins):
@@ -73,7 +79,11 @@ class Agent():
         """
         # Begin your code
         # TODO
-        raise NotImplementedError("Not implemented yet.")
+        """
+        Use numpy function digitize to discretize the value with given bins.
+        """
+        bin_index = np.digitize(value, bins)
+        return bin_index-1
         # End your code
 
     def discretize_observation(self, observation):
@@ -94,7 +104,10 @@ class Agent():
         """
         # Begin your code
         # TODO
-        raise NotImplementedError("Not implemented yet.")
+        """
+        discretize the giving state
+        """
+        return [self.discretize_value(observation[i], self.bins[i]) for i in range(4)]
         # End your code
 
     def choose_action(self, state):
@@ -108,7 +121,12 @@ class Agent():
         """
         # Begin your code
         # TODO
-        raise NotImplementedError("Not implemented yet.")
+        """
+        Use epsilon greedy select action
+        """
+        if random.random() > self.epsilon:
+            return np.argmax(self.qtable[state[0]][state[1]][state[2]][state[3]])
+        return np.array(random.randrange(self.n_actions))
         # End your code
 
     def learn(self, state, action, reward, next_state, done):
@@ -125,7 +143,15 @@ class Agent():
         """
         # Begin your code
         # TODO
-        raise NotImplementedError("Not implemented yet.")
+        """
+        update Q table by the formula: Q(s,a) = (1-alpha) * Q(s,a) + alpha * (r + gamma * max(Q(s')))
+        """
+        if done:
+            self.qtable[state[0]][state[1]][state[2]][state[3]][action] = self.qtable[state[0]][state[1]][state[2]][state[3]][action] + self.learning_rate * (
+                reward - self.qtable[state[0]][state[1]][state[2]][state[3]][action])
+        else:
+            self.qtable[state[0]][state[1]][state[2]][state[3]][action] = self.qtable[state[0]][state[1]][state[2]][state[3]][action] + self.learning_rate * (
+                reward + self.gamma * np.max(self.qtable[next_state[0]][next_state[1]][next_state[2]][next_state[3]]) - self.qtable[state[0]][state[1]][state[2]][state[3]][action])
         # End your code
         np.save("./Tables/cartpole_table.npy", self.qtable)
 
@@ -142,7 +168,13 @@ class Agent():
         """
         # Begin your code
         # TODO
-        raise NotImplementedError("Not implemented yet.")
+        """
+        Return max Q value of giving state
+        """
+        # Q opt: Need at least 200 step to reach the final goal. The optimal reward is 200.
+        print("Q opt: ", (1-self.gamma**200)/(1-self.gamma))
+        state = self.discretize_observation(self.env.reset())
+        return np.max(self.qtable[state[0]][state[1]][state[2]][state[3]])
         # End your code
 
 
@@ -156,6 +188,7 @@ def train(env):
     """
     training_agent = Agent(env)
     rewards = []
+    #for ep in range(episode):
     for ep in tqdm(range(episode)):
         state = training_agent.discretize_observation(env.reset())
         done = False
@@ -197,6 +230,7 @@ def test(env):
         state = testing_agent.discretize_observation(testing_agent.env.reset())
         count = 0
         while True:
+            #env.render()
             count += 1
             action = np.argmax(testing_agent.qtable[tuple(state)])
             next_observation, _, done, _ = testing_agent.env.step(action)

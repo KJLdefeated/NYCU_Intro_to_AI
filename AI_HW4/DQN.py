@@ -5,6 +5,8 @@ import numpy as np
 import gym
 import random
 from collections import deque
+from torch.autograd import Variable
+from torch import Tensor
 import os
 from tqdm import tqdm
 total_rewards = []
@@ -79,7 +81,7 @@ class Net(nn.Module):
 
 
 class Agent():
-    def __init__(self, env, epsilon=0.95, learning_rate=0.0002, GAMMA=0.97, batch_size=32, capacity=10000):
+    def __init__(self, env, epsilon=0.05, learning_rate=0.0002, GAMMA=0.97, batch_size=32, capacity=10000):
         """
         The agent learning how to control the action of the cart pole.
         Hyperparameters:
@@ -103,8 +105,7 @@ class Agent():
         self.evaluate_net = Net(self.n_actions)  # the evaluate network
         self.target_net = Net(self.n_actions)  # the target network
 
-        self.optimizer = torch.optim.Adam(
-            self.evaluate_net.parameters(), lr=self.learning_rate)  # Adam is a method using to optimize the neural network
+        self.optimizer = torch.optim.Adam(self.evaluate_net.parameters(), lr=self.learning_rate)  # Adam is a method using to optimize the neural network
 
     def learn(self):
         '''
@@ -132,9 +133,34 @@ class Agent():
 
         # Begin your code
         # TODO
-        
+        """
+        s: state; s':next state; a: action; r: reward
+        Sample a batch data from memory buffer.
+        Q_evaluate: use torch gather to get Q(s,a)
+        Q_next: use target net comput Q'(s', )
+        Q_target: r + gamma * Q'(s', argmax(Q'(s', .))) * (1-done)
+        Use mean square loss between Q and Q_target to update the evaluate net
+        """
+        batch =  self.buffer.sample(self.batch_size)
+        #batch = (observations, actions, rewards, next_observations, done)
+        state_batch = Variable(Tensor(np.array(batch[0])))
+        action_batch = Variable(Tensor(batch[1]))
+        reward_batch = Variable(Tensor(batch[2]))
+        mask_batch = Variable(Tensor(batch[4]))
+        next_state_batch = Variable(Tensor(np.array(batch[3])))
+
+        Q_evaluate = torch.gather(self.evaluate_net(state_batch), 1, action_batch.view(-1, 1).long()) 
+        Q_next = self.target_net(next_state_batch).detach()
+        Q_target = reward_batch.view(-1, 1) + self.gamma * Q_next.max(1)[0].view(self.batch_size, 1) * (1-mask_batch.view(self.batch_size, 1))
+        loss = F.mse_loss(Q_evaluate, Q_target)
+
+        self.optimizer.zero_grad()
+        loss.backward()
+        self.optimizer.step()
+
         # End your code
         torch.save(self.target_net.state_dict(), "./Tables/DQN.pt")
+        return loss
 
     def choose_action(self, state):
         """
@@ -151,7 +177,15 @@ class Agent():
         with torch.no_grad():
             # Begin your code
             # TODO
-            raise NotImplementedError("Not implemented yet.")
+            """
+            Use epsilon greedy select action
+            """
+            state = torch.Tensor(state)
+            if random.uniform(0,1) > self.epsilon:
+                Q_val = self.evaluate_net(state)
+                action = torch.argmax(Q_val).item()
+            else:
+                action = np.array(random.randrange(self.n_actions))
             # End your code
         return action
 
@@ -168,7 +202,10 @@ class Agent():
         """
         # Begin your code
         # TODO
-        raise NotImplementedError("Not implemented yet.")
+        """
+        Return the max Q that initial state pass through the target net.
+        """
+        return max(self.target_net(Tensor(self.env.reset())))
         # End your code
 
 
@@ -193,7 +230,7 @@ def train(env):
             action = agent.choose_action(state)
             next_state, reward, done, _ = env.step(action)
             agent.buffer.insert(state, int(action), reward, next_state, int(done))
-            
+
             if len(agent.buffer) >= 1000:
                 agent.learn()
             if done:
@@ -219,8 +256,8 @@ def test(env):
         count = 0
         while True:
             count += 1
-            Q = testing_agent.target_net.forward(
-                torch.FloatTensor(state)).squeeze(0).detach()
+            env.render()
+            Q = testing_agent.target_net(torch.FloatTensor(state)).squeeze(0).detach()
             action = int(torch.argmax(Q).numpy())
             next_state, _, done, _ = env.step(action)
             if done:
