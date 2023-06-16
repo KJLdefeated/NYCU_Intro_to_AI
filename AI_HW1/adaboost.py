@@ -151,14 +151,16 @@ class Adaboost:
         clfs = [WeakClassifier(feature=feature) for feature in features]
         bestClf = None
         bestError = sum(weights)
-        select_rate = 0.9
+        #for w in weights:
+        #    bestError += w**2
+        #bestError = np.sqrt(bestError)
         for clf in clfs:
             error = 0
             for i in range(len(iis)):
                 if clf.classify(iis[i]) != labels[i]:
-                    error += select_rate * weights[i]
-                else 
-                    error += (1-select_rate) * weights[i]
+                    error += weights[i]
+                    #error += weights[i]**2 # Use mean square error
+            #error = np.sqrt(error)
             if error < bestError:
                 bestError = error
                 bestClf = clf

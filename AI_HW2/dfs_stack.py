@@ -4,6 +4,12 @@ edgeFile = 'edges.csv'
 
 def dfs(start, end):
     # Begin your code (Part 2)
+    """
+    Read csv file and construct edges.
+    Using stack to implement dfs. Stop searching util find the end point.
+    Record the distance of current point from start point and the parent of each node.
+    Finally find the path.
+    """
     edge = {}
     with open(edgeFile) as f:
         reader = csv.reader(f)

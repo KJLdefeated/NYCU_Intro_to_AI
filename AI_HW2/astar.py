@@ -6,6 +6,12 @@ heuristicFile = 'heuristic.csv'
 
 def astar(start, end):
     # Begin your code (Part 4)
+    """
+    First construc the edges from edge file then import the heuristic from heuristic csv.
+    The method is like BFS, but we first consider the minimum heuristic value and distance from start.
+    Record the distance of current point from start point and the parent of each node.
+    Finally find the path.
+    """
     edge = {}
     heuristic = {1079387396:{},1737223506:{},8513026827:{}}
     with open(edgeFile) as f:
@@ -43,7 +49,7 @@ def astar(start, end):
         if x not in edge:
             continue
         for y, d_y in edge[x]:
-            if y not in vis:
+            if y not in dis or dis[y] > d_y + dis[x]:
                 par[y] = x
                 dis[y] = d_y + dis[x]
                 vis.add(y)

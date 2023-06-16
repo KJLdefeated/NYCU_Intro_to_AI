@@ -5,6 +5,11 @@ edgeFile = 'edges.csv'
 
 def bfs(start, end):
     # Begin your code (Part 1)
+    """
+    First read the csv and construct the edge dictionary.
+    Do BFS and record the distance of current point from start point and the parent of each node.
+    Finally find the path.
+    """
     edge = {}
     with open(edgeFile) as f:
         reader = csv.reader(f)
